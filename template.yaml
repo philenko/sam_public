@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  cloud_resume
+
+  Sample SAM Template for cloud_resume
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  MyWebsite: # Website Bucket
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: my-cloud-resume-v2.0
+      WebsiteConfiguration:
+        IndexDocument: index.html
+      AccessControl: PublicRead #DONT FORGET TO CHANGE !!!
+  BucketPolicy: #Policy
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MyWebsite
+      PolicyDocument:
+        Id: MyPolicy
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action: "s3:GetObject"
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref MyWebsite
+                - /*
+  MyRoute53:
+    Type: "AWS::Route53::RecordSetGroup"
+    Properties:
+      HostedZoneId: Z06357283MQT76REX6QUK 
+      RecordSets:
+        - Name: phdit.net
+          Type: A
+          AliasTarget:
+            HostedZoneId: Z2FDTNDATAQYW2
+            DNSName: !GetAtt MyDistribution.DomainName
+
+  MyDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        PriceClass: PriceClass_100
+        DefaultCacheBehavior:
+          ViewerProtocolPolicy: redirect-to-https
+          TargetOriginId: my-cloud-resume-v2.0.s3-website-us-east-1.amazonaws.com
+          DefaultTTL: 0
+          MinTTL: 0
+          MaxTTL: 0
+          ForwardedValues: 
+             QueryString: 'false'
+        Origins:
+          - DomainName: my-cloud-resume-v2.0.s3-website-us-east-1.amazonaws.com
+            Id: my-cloud-resume-v2.0.s3-website-us-east-1.amazonaws.com
+            CustomOriginConfig: 
+              OriginProtocolPolicy: match-viewer
+        Enabled: "True"
+        ViewerCertificate: 
+          AcmCertificateArn: arn:aws:acm:us-east-1:898195409977:certificate/9531edc3-ef2e-4d67-8755-a16cfc2e69ea
+          SslSupportMethod: sni-only
+        DefaultRootObject: index.html
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: hello_world/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Events:
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /hello
+            Method: get
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  HelloWorldApi:
+    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  HelloWorldFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt HelloWorldFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt HelloWorldFunctionRole.Arn
+  MyWebsite:
+    Description: "S3 Bucket for my static Website"
+    Value: !GetAtt MyWebsite.Arn
