@@ -1,4 +1,4 @@
-import json
+import simplejson as json
 import boto3
 dynamodb = boto3.resource('dynamodb')
 table_name = 'cloud-resume'
@@ -9,7 +9,7 @@ ID = '0'
 
 
 def lambda_handler(event, context):
-    print('Fetching item id = {} from the dB\n'.format(id))
+    print('Fetching item id = {} from the dB\n'.format(ID))
     
     response = table.get_item(
         Key={
@@ -26,7 +26,7 @@ def lambda_handler(event, context):
                         'Access-Control-Allow-Methods': 'GET'
             },
             "body": json.dumps({
-                        "counter": response['Item'].get('counter'),
+                        "counter": response['Item'].get('total_count'),
             }),
         }
     else:

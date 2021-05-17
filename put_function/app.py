@@ -1,37 +1,36 @@
 import json
+import boto3
+dynamodb = boto3.resource('dynamodb')
+table_name = 'cloud-resume'
+table = dynamodb.Table(table_name)
+ID = '0'
 
-# import requests
 
 
 def lambda_handler(event, context):
-    """Sample pure Lambda function
-
-    Parameters
-    ----------
-    event: dict, required
-        API Gateway Lambda Proxy Input Format
-
-        Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
-
-    context: object, required
-        Lambda Context runtime methods and attributes
-
-        Context doc: https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html
-
-    Returns
-    ------
-    API Gateway Lambda Proxy Output Format: dict
-
-        Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
-    """
-
-    # try:
-    #     ip = requests.get("http://checkip.amazonaws.com/")
-    # except requests.RequestException as e:
-    #     # Send some context about this error to Lambda Logs
-    #     print(e)
-
-    #     raise e
+    print('Fetching item id = {} from the dB\n'.format(ID))
+ 
+    response = table.get_item(
+        Key={
+            'ID': ID
+        }
+        )
+    if 'Item' in response:
+        response = table.update_item(
+             Key={
+                'ID': ID
+            },
+            UpdateExpression="set total_count = total_count + :N",
+            ExpressionAttributeValues={
+                ':N': 1
+            }
+        )
+        if response['ResponseMetadata']['HTTPStatusCode'] == 200:
+            print('Item updated with status code = {} OK'.format(response['ResponseMetadata']['HTTPStatusCode']))
+        else:
+            print('Some error occurred while updating the item from the dB')
+    else:
+        print('Item id = {} not found in the dB'.format(ID))
 
     return {
         "statusCode": 200,
@@ -39,9 +38,5 @@ def lambda_handler(event, context):
             'Access-Control-Allow-Headers': '*',
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': '*'
-        },
-        "body": json.dumps({
-            "counter": "2",
-            # "location": ip.text.replace("\n", "")
-        }),
+        }
     }
